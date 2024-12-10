@@ -2,6 +2,7 @@ package com.ssdev.day_06;
 
 import java.util.*;
 import java.io.IOException;
+import java.util.stream.Collectors;
 
 public class Day06P2 {
   private final static List<Character> DIRECTIONS = List.of('^','v','>','<');
@@ -19,12 +20,10 @@ public class Day06P2 {
       var start_pos = g_route.get(0);
       var not_at_start = (route[0]!=start_pos[0]) &&
                          (route[1]!=start_pos[1]);
-        
       // Insert Obstacle
       if (not_at_start) {
         updateMapLine('#', route);
       }
-
       // Checks Loop
       if (findLoop()) loop_count++;
     };
@@ -33,7 +32,72 @@ public class Day06P2 {
   }
 
   private static boolean findLoop() {
-    return false;
+    List<Integer[]> g_positions = new ArrayList<>();
+    g_positions.add(findCurrentPosition());
+    boolean is_looping = false;
+
+    while (true) {
+      Integer curr_pos[] = g_positions
+        .get(g_positions.size()-1);
+
+      if (hasExitedMap(curr_pos)) {
+        is_looping = false;
+        break;
+      }
+
+      Integer next_step[] = {0,0,0};
+      char direction = map.get(curr_pos[1])
+        .charAt(curr_pos[0]);
+
+      switch (direction) {
+        case '>':
+          next_step[0] = curr_pos[0]+1;
+          next_step[1] = curr_pos[1];
+          next_step[2] = 1;
+          break;
+        case 'v':
+          next_step[0] = curr_pos[0];
+          next_step[1] = curr_pos[1]+1;
+          next_step[2] = 3;
+          break;
+        case '<':
+          next_step[0] = curr_pos[0]-1;
+          next_step[1] = curr_pos[1];
+          next_step[2] = 0;
+          break;
+        case '^':
+        default:
+          next_step[0] = curr_pos[0];
+          next_step[1] = curr_pos[1]-1;
+          next_step[2] = 2;
+          break;
+      }
+
+      var next_pos = map.get(next_step[1])
+        .charAt(next_step[0]);
+
+      var route_rpt = g_positions.stream().filter(p->(
+        (p[0]==curr_pos[0]) &&
+        (p[1]==curr_pos[1]) &&
+        (p[2]==curr_pos[2])
+      )).collect(Collectors.toList());
+
+      if (route_rpt.size()>=3) {
+        is_looping = true;
+        break;
+      }
+
+      if (next_pos == '#') {
+        char new_direction = rotateDirection(direction);
+        updateMapLine(new_direction, curr_pos);
+      } else {
+        g_positions.add(next_step);
+        updateMapLine('.', curr_pos);
+        updateMapLine(direction, next_step);
+      }
+    }
+
+    return is_looping;
   }
 
   private static List<Integer[]> guardRoutes() {
@@ -48,8 +112,7 @@ public class Day06P2 {
 
       if (hasExitedMap(curr_pos)) break;
 
-      char direction = map
-        .get(curr_pos[1])
+      char direction = map.get(curr_pos[1])
         .charAt(curr_pos[0]);
 
       Integer next_step[] = {0,0,0};
@@ -99,23 +162,16 @@ public class Day06P2 {
   private static Integer[] findCurrentPosition() {
     Integer position[] = {0,0,0};
 
+
     for (int h=0; h<map.size(); h++) {
       for (int w=0; w<map.get(h).length(); w++) {
         var direction = map.get(h).charAt(w);
-        boolean isGuard = DIRECTIONS.contains(direction);
+        boolean is_guard = DIRECTIONS.contains(direction);
 
-        if (isGuard) {
-          int d_index = 0;
-          
-          for (int i=0; i<DIRECTIONS.size(); i++) {
-            if (direction == DIRECTIONS.get(i)) {
-              d_index = i;
-            }
-          }
-
+        if (is_guard) {
           position[0] = w;
           position[1] = h;
-          position[2] = d_index;
+          position[2] = DIRECTIONS.indexOf(direction);
         }
       }
     }
